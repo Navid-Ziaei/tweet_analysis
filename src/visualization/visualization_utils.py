@@ -2,7 +2,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 
-def plot_word_frequencies_subplots(across_words, across_counts, non_across_words, non_across_counts, num_across_tweets, num_non_across_tweets, save_path):
+def plot_word_frequencies_subplots(across_words, across_counts, non_across_words, non_across_counts, num_across_tweets,
+                                   num_non_across_tweets, save_path):
     """
     Plot two bar charts of word frequencies as subplots in a single figure.
 
@@ -42,7 +43,10 @@ def plot_word_frequencies_subplots(across_words, across_counts, non_across_words
     # Save the figure
     plt.savefig(save_path + "word_frequency_comparison.png")
     plt.show()
-def plot_grouped_word_frequencies(across_words, across_counts, non_across_words, non_across_counts, num_across_tweets, num_non_across_tweets, save_path):
+
+
+def plot_grouped_word_frequencies(across_words, across_counts, non_across_words, non_across_counts, num_across_tweets,
+                                  num_non_across_tweets, save_path):
     """
     Plot a grouped bar chart of normalized word frequencies for Across Protocol related and non-related tweets.
     """
@@ -59,13 +63,14 @@ def plot_grouped_word_frequencies(across_words, across_counts, non_across_words,
     width = total_width / 2  # the width of the bars
 
     # Plot bars for Across Protocol words
-    rects1 = ax.bar(ind - width/2, across_norm_counts, width, label='Across Protocol', color='blue')
+    rects1 = ax.bar(ind - width / 2, across_norm_counts, width, label='Across Protocol', color='blue')
 
     # Align words from both categories
-    non_across_aligned_counts = [non_across_norm_counts[non_across_words.index(word)] if word in non_across_words else 0 for word in across_words]
+    non_across_aligned_counts = [non_across_norm_counts[non_across_words.index(word)] if word in non_across_words else 0
+                                 for word in across_words]
 
     # Plot bars for non-Across Protocol words
-    rects2 = ax.bar(ind + width/2, non_across_aligned_counts, width, label='Non-Across Protocol', color='green')
+    rects2 = ax.bar(ind + width / 2, non_across_aligned_counts, width, label='Non-Across Protocol', color='green')
 
     # Add some text for labels, title, and axes ticks
     ax.set_xlabel('Words')
@@ -80,6 +85,7 @@ def plot_grouped_word_frequencies(across_words, across_counts, non_across_words,
     plt.subplots_adjust(bottom=0.2)  # Increase the bottom margin to prevent cutting off x-tick labels
     plt.savefig(save_path + "word_frequency_diff.png")
     plt.show()
+
 
 def plot_word_frequencies(words, counts, title, color, save_path):
     """
@@ -102,6 +108,7 @@ def plot_word_frequencies(words, counts, title, color, save_path):
     plt.savefig(save_path + f"word_frequency_{title}.png")
     plt.show()
 
+
 def plot_label_hist(data, save_path):
     # Count the frequency of each label
     label_counts = data['is_related_to_Across_protocol'].value_counts()
@@ -117,6 +124,7 @@ def plot_label_hist(data, save_path):
     plt.tight_layout()
     plt.savefig(save_path + "label_hist.png")
     plt.show()
+
 
 def plot_tweer_length_hist(data, save_path):
     if 'text_length' not in data.columns:

@@ -5,6 +5,7 @@ result/
 data/
 stanford-ner-2015-04-20/
 src/model/stanford-ner-2015-04-20/
+src/model/stanford-postagger-full-2020-11-17/
 .idea/
 .spyderproject/
 .spyproject/
@@ -13,6 +14,7 @@ configs/settings.yaml
 data/
 
 **/stanford-ner-2015-04-20/
+**/stanford-postagger-full-2020-11-17/
 
 **/__pycache__/
 **/saved_model/
