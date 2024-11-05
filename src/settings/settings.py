@@ -45,8 +45,7 @@ class Settings:
         # LDGD training configs
         self.load_trained_model = False
         self.batch_size = 100
-        self.num_epochs_train = 100
-        self.num_epochs_test = 100
+        self.num_epochs = 100
 
         self.binary_column = 'h5'
         self.__dataset_task = 'm_sequence'

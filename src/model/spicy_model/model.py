@@ -2,18 +2,30 @@ import spacy
 from sklearn.metrics import accuracy_score
 from tqdm import tqdm
 
-def predict_label_spacy(text, model_name):
+def predict_label_spacy(texts, model_name):
     nlp = spacy.load(model_name)
-    doc = nlp(text)
-    predicted_label = 0
-    for token in doc:
-        if token.text.lower() == 'across':
-            # If 'across' has a POS that is not 'ADP' (adposition) or has an entity type
-            if token.pos_ != 'ADP' or token.ent_type_ != '':
-                predicted_label = 1
-                break
+    if isinstance(texts, str):
+        texts = [texts]
+    output = []
+    predicted_labels= []
+    for text in texts:
+        doc = nlp(text)
+        predicted_label = 0
+        for token in doc:
+            if token.text.lower() == 'across':
+                # If 'across' has a POS that is not 'ADP' (adposition) or has an entity type
+                if token.pos_ != 'ADP' or token.ent_type_ != '':
+                    predicted_label = 1
+                    break
+        output.append(
+            {
+                'text': text,
+                'label': int(predicted_label)
+            }
+        )
+        predicted_labels.append(predicted_label)
 
-    return predicted_label
+    return output, predicted_labels
 def analyze_across_texts_spacy(model_name, data, labels):
     """
     Analyzes texts to determine the role of the word 'across' and calculate the prediction accuracy.

@@ -3,29 +3,37 @@ from sklearn.metrics import accuracy_score
 from tqdm import tqdm
 
 
-def predict_label_bert(text, model_name):
+def predict_label_bert(texts, model_name):
     tokenizer = AutoTokenizer.from_pretrained(model_name)
     pos_pipeline = pipeline("token-classification", model=model_name)
 
     # Process each text and analyze the word 'across'
-    chunks = process_text(text, tokenizer)
-    predicted_label = 0
+    predicted_labels = []
+    output = []
+    for text in texts:
+        chunks = process_text(text, tokenizer)
+        predicted_label = 0
 
-    for chunk in chunks:
-        pos_tags = pos_pipeline(chunk)
-        for tag in pos_tags:
-            word = tag['word'].replace('##', '')  # Fix tokenization issues common with BERT
-            if word.lower() == 'across':
-                print(f"{word}: {tag['entity']} ")
-                pos_tag = tag['entity']  # Collect POS tags from the transformers output
-                # ent_type = tag['entity_group']  # Collect entity type
-                if pos_tag != 'ADP':  # Assume 'ADP' stands for adpositions/prepositions
-                    predicted_label = 1
-                    break
-        if predicted_label == 1:
-            break  # Stop processing further chunks if 'across' is already processed as significant
+        for chunk in chunks:
+            pos_tags = pos_pipeline(chunk)
+            for tag in pos_tags:
+                word = tag['word'].replace('##', '')  # Fix tokenization issues common with BERT
+                if word.lower() == 'across':
+                    print(f"{word}: {tag['entity']} ")
+                    pos_tag = tag['entity']  # Collect POS tags from the transformers output
+                    # ent_type = tag['entity_group']  # Collect entity type
+                    if pos_tag != 'ADP':  # Assume 'ADP' stands for adpositions/prepositions
+                        predicted_label = 1
+                        break
+            predicted_labels.append(predicted_label)
+            output.append({
+                'text': text,
+                'label': predicted_label
+            })
+            if predicted_label == 1:
+                break  # Stop processing further chunks if 'across' is already processed as significant
 
-    return predicted_label
+    return output, predicted_labels
 
 
 def process_text(text, tokenizer, max_len=10):  # 510 + 2 for special tokens [CLS] and [SEP]

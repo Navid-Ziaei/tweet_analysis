@@ -1,4 +1,5 @@
 import os
+import pickle
 
 import numpy as np
 import pandas as pd
@@ -12,11 +13,11 @@ from imblearn.under_sampling import RandomUnderSampler
 from imblearn.over_sampling import RandomOverSampler
 from sklearn.utils.class_weight import compute_sample_weight
 import spacy
-from xgboost.testing.data import joblib
+#from xgboost.testing.data import joblib
 
 
 class XGBoostTextClassifier:
-    def __init__(self, data, labels, paths, mode='none'):
+    def __init__(self, data, labels, mode='none'):
         self.data = data
         self.labels = labels
         self.mode = mode
@@ -24,7 +25,7 @@ class XGBoostTextClassifier:
         self.model = XGBClassifier(use_label_encoder=False, eval_metric='logloss')
         self.nlp = spacy.load('en_core_web_sm')
         self.results = []
-        self.best_model_path = paths.path_model
+
 
     def preprocess_documents(self):
         preprocessed_docs = [
@@ -35,6 +36,7 @@ class XGBoostTextClassifier:
     def vectorize_text(self):
         preprocessed_docs = self.preprocess_documents()
         tfidf_matrix = self.vectorizer.fit_transform(preprocessed_docs)
+
         return tfidf_matrix
 
     def train_model(self, save_path):
@@ -79,8 +81,9 @@ class XGBoostTextClassifier:
             if f1 > best_score:
                 best_score = f1
                 best_model = self.model
-                self.best_model_path = os.path.join(save_path, f"best_model_fold_{fold}.xgb")
-                joblib.dump(self.model, self.best_model_path)
+                pickle.dump(best_model, open(os.path.join(save_path, f"best_xgb_model.pkl"), "wb"))
+                with open(os.path.join(save_path, f'vectorizer.pkl'), 'wb') as fin:
+                    pickle.dump(self.vectorizer, fin)
 
             y_pred = self.model.predict(X_test)
             cm = confusion_matrix(y_test, y_pred)
@@ -106,13 +109,23 @@ class XGBoostTextClassifier:
         # Plot confusion matrix for the best model
 
     def load_and_predict(self, model_path, new_data):
-        model = joblib.load(model_path)
+        model = pickle.load(open(os.path.join(model_path, f"best_xgb_model.pkl"), "rb"))
+        with open(os.path.join(model_path, f'vectorizer.pkl'), 'rb') as file:
+            loaded_vectorizer_pickle = pickle.load(file)
+
         new_preprocessed_docs = [
             ' '.join(token.lemma_.lower() for token in self.nlp(doc) if token.is_alpha and not token.is_stop) for doc in
             new_data]
-        new_tfidf_matrix = self.vectorizer.transform(new_preprocessed_docs)
+        new_tfidf_matrix = loaded_vectorizer_pickle.transform(new_preprocessed_docs)
         predictions = model.predict(new_tfidf_matrix)
-        return predictions
+
+        output = []
+        for text, pred_label in zip(new_data, predictions):
+            output.append(
+                {'text': text,
+                 'label': int(pred_label)}
+            )
+        return output, predictions
     def get_important_features(self):
         feature_importances = self.model.feature_importances_
         feature_names = self.vectorizer.get_feature_names_out()

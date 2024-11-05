@@ -16,6 +16,7 @@ import matplotlib.pyplot as plt
 from sklearn.metrics import accuracy_score, precision_recall_fscore_support
 import torch
 
+
 def fine_tune_and_evaluate2(model_name, data, labels, paths, sampling_method='none'):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     tokenizer = AutoTokenizer.from_pretrained(model_name)
@@ -23,7 +24,7 @@ def fine_tune_and_evaluate2(model_name, data, labels, paths, sampling_method='no
     skf = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
 
     for fold, (train_idx, test_idx) in enumerate(skf.split(data, labels)):
-        print(f"Training fold {fold+1}/{skf.n_splits}")
+        print(f"Training fold {fold + 1}/{skf.n_splits}")
 
         # Sampling
         if sampling_method == 'oversample':
@@ -37,7 +38,8 @@ def fine_tune_and_evaluate2(model_name, data, labels, paths, sampling_method='no
         test_texts, test_labels = data[test_idx], labels[test_idx]
 
         # Tokenization
-        train_encodings = tokenizer(list(train_texts), truncation=True, padding=True, max_length=512, return_tensors="pt")
+        train_encodings = tokenizer(list(train_texts), truncation=True, padding=True, max_length=512,
+                                    return_tensors="pt")
         test_encodings = tokenizer(list(test_texts), truncation=True, padding=True, max_length=512, return_tensors="pt")
 
         # Dataset creation
@@ -94,7 +96,7 @@ def fine_tune_and_evaluate2(model_name, data, labels, paths, sampling_method='no
             acc = accuracy_score(all_labels, all_preds)
             precision, recall, f1, _ = precision_recall_fscore_support(all_labels, all_preds, average='binary')
             results.append({'accuracy': acc, 'precision': precision, 'recall': recall, 'f1_score': f1})
-            print(f"Results for fold {fold+1}: Accuracy: {acc}, Precision: {precision}, Recall: {recall}, F1: {f1}")
+            print(f"Results for fold {fold + 1}: Accuracy: {acc}, Precision: {precision}, Recall: {recall}, F1: {f1}")
 
     # Saving results
     results_df = pd.DataFrame(results)
@@ -121,18 +123,8 @@ class PlottingCallback(TrainerCallback):
             if eval_log:
                 self.eval_metrics.append(eval_log[-1]['eval_loss'])
 
-        # Plotting the curve only if we have any data to plot
-        if self.training_losses:
-            plt.figure(figsize=(10, 5))
-            plt.subplot(1, 2, 1)
-            plt.plot(self.training_losses, label='Training Loss')
-            plt.xlabel('Epoch')
-            plt.ylabel('Loss')
-            plt.title('Training Loss Over Epochs')
-            plt.legend()
-
         if self.eval_metrics:
-            plt.subplot(1, 2, 2)
+            plt.subplot(1, 1, 1)
             plt.plot(self.eval_metrics, label='Evaluation Loss', color='red')
             plt.xlabel('Epoch')
             plt.ylabel('Loss')
@@ -150,13 +142,16 @@ def compute_metrics(eval_pred):
     predictions = np.argmax(logits, axis=-1)
     return {
         'accuracy': accuracy_score(labels, predictions),
-        'precision': precision_score(labels, predictions, pos_label=1),
-        'recall': recall_score(labels, predictions, pos_label=1),
-        'f1_score': f1_score(labels, predictions, pos_label=1)
+        'precision': precision_score(labels, np.squeeze(predictions)),
+        'recall': recall_score(labels, np.squeeze(predictions)),
+        'f1_score': f1_score(labels, np.squeeze(predictions))
     }
 
 
 def fine_tune_and_evaluate(model_name, data, labels, paths, sampling_method='none'):
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    print(f"The device is {device}")
+
     tokenizer = AutoTokenizer.from_pretrained(model_name)
     skf = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
     results = []
@@ -165,10 +160,21 @@ def fine_tune_and_evaluate(model_name, data, labels, paths, sampling_method='non
 
     for fold, (train_index, test_index) in enumerate(skf.split(data, labels)):
         print(f"Training fold {fold + 1}/{skf.n_splits}")
-        model = AutoModelForSequenceClassification.from_pretrained(model_name, num_labels=2)
 
-        train_texts, test_texts = data[train_index], data[test_index]
-        train_labels, test_labels = labels[train_index], labels[test_index]
+        if sampling_method == 'oversample':
+            ros = RandomOverSampler(random_state=42)
+            train_idx, _ = ros.fit_resample(np.array(train_index).reshape(-1, 1), labels[train_index])
+        elif sampling_method == 'undersample':
+            rus = RandomUnderSampler(random_state=42)
+            train_idx, _ = rus.fit_resample(np.array(train_index).reshape(-1, 1), labels[train_index])
+        else:
+            train_idx = train_index
+
+        model = AutoModelForSequenceClassification.from_pretrained(model_name, num_labels=2)
+        #model.to(device)
+
+        train_texts, test_texts = data[np.squeeze(train_idx)], data[test_index]
+        train_labels, test_labels = labels[np.squeeze(train_idx)], labels[test_index]
 
         train_encodings = tokenizer(list(train_texts), truncation=True, padding=True, max_length=512)
         test_encodings = tokenizer(list(test_texts), truncation=True, padding=True, max_length=512)
@@ -185,18 +191,20 @@ def fine_tune_and_evaluate(model_name, data, labels, paths, sampling_method='non
         })
 
         training_args = TrainingArguments(
-            output_dir=os.path.join(paths, f'results_fold_{fold}'),
+            output_dir=os.path.join(paths.path_result, f'results_fold_{fold}'),
             evaluation_strategy="epoch",
             learning_rate=2e-5,
-            per_device_train_batch_size=16,
-            per_device_eval_batch_size=16,
-            num_train_epochs=3,
+            per_device_train_batch_size=64,
+            per_device_eval_batch_size=32,
+            num_train_epochs=10,
             weight_decay=0.01,
             save_strategy="epoch",
             load_best_model_at_end=True,
-            metric_for_best_model='f1_score'
+            metric_for_best_model='f1_score',
+            report_to=[]
         )
 
+        plotting_callback = PlottingCallback(output_dir=paths.path_result)
         trainer = Trainer(
             model=model,
             args=training_args,
@@ -204,7 +212,8 @@ def fine_tune_and_evaluate(model_name, data, labels, paths, sampling_method='non
             eval_dataset=test_dataset,
             tokenizer=tokenizer,
             compute_metrics=compute_metrics,
-            data_collator=DataCollatorWithPadding(tokenizer)
+            data_collator=DataCollatorWithPadding(tokenizer),
+            callbacks=[plotting_callback]
         )
 
         trainer.train()
@@ -213,21 +222,34 @@ def fine_tune_and_evaluate(model_name, data, labels, paths, sampling_method='non
         if eval_results['eval_f1_score'] > best_metric:
             best_metric = eval_results['eval_f1_score']
             best_model = model
-            model.save_pretrained(os.path.join(paths, 'best_model'))  # Save the best model
+            model.save_pretrained(os.path.join(paths.path_result, f'best_model_{model_name}'))  # Save the best model
 
         results.append(eval_results)
+        print(f"Results for fold {fold + 1}: {eval_results}")
 
     # Save results to CSV
     results_df = pd.DataFrame(results)
-    results_df.to_csv(os.path.join(paths, "evaluation_results.csv"), index=False)
+    results_df.to_csv(os.path.join(paths.path_result, f"evaluation_results_{model_name}.csv"), index=False)
+
+    # Calculate mean and std for the metrics
+    mean_results = results_df.mean()
+    std_results = results_df.std()
+    summary_df = pd.DataFrame({'mean': mean_results, 'std': std_results})
+    summary_df.to_csv(paths.path_result + f"results_summary_{model_name}.csv", index=True)
 
     return best_model
 
 
 # Load and predict using the best model
 def load_model_and_predict(model_path, tokenizer, texts):
-    model = AutoModelForSequenceClassification.from_pretrained(model_path)
+    model = AutoModelForSequenceClassification.from_pretrained(model_path + 'best_model_bert-base-uncased')
     encodings = tokenizer(texts, truncation=True, padding=True, max_length=512, return_tensors="pt")
     outputs = model(**encodings)
     predictions = torch.argmax(outputs.logits, axis=-1)
-    return predictions.tolist()
+    output = []
+    for text, pred_label in zip(texts, predictions):
+        output.append(
+            {'text': text,
+             'label': int(pred_label)}
+        )
+    return output, predictions.tolist()

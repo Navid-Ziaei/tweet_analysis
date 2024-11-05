@@ -10,7 +10,6 @@ PyYAML==6.0.2
 scikit_learn==1.5.2
 seaborn==0.13.2
 spacy==3.8.2
-spacy==3.3.3
 torch==1.12.1
 tqdm==4.66.4
 transformers==4.20.1

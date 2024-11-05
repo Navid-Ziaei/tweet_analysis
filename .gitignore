@@ -15,6 +15,7 @@ data/
 
 **/stanford-ner-2015-04-20/
 **/stanford-postagger-full-2020-11-17/
+**/best_model_bert-base-uncased/
 
 **/__pycache__/
 **/saved_model/
