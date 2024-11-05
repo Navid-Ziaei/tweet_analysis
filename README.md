@@ -89,17 +89,9 @@ The `settings.yml` file is a crucial configuration file used to control various 
 
 
 - model:
-  - `spicy NER`
-  - `stanford NER`
-  - `Bert NER`
-  - `XGBoost`
-  - `Transformer`
--  This section specifies the machine learning models to be used. even one of them can be used
-- `Prrproceesing`: 
-- `sampling_method`: Specify the balancing method from:
-  - `RandomOverSampler`
-  - `RandomUnderSampler`
-  - `None`
+  - `xgboost`
+  - `unsupervised`
+  - `transformer`
 - `batch_size`: The number of samples per batch during training. Set to 100, meaning each training iteration will process 100 samples.
 - `num_epochs`: The number of epochs (iterations over the entire dataset) for training. Set to 100, which means the model will train for 100 epochs.
 = `debug_mode`: if it is false, it save results in debug folder, otherwise it each time it creates a folder with timestamp and save results to it.

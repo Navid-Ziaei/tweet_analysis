@@ -2,11 +2,9 @@
 debug_mode: true
 
 method_list:
-  - "spicy NER"
-  - "stanford NER"
-  - "Bert NER"
-  - "XGBoost"
-  - "Transformer"
+  - "xgboost"
+  #- "unsupervised"
+  #- "transformer"
 
 # Training LDGD
 batch_size : 16
